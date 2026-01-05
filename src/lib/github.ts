@@ -15,8 +15,8 @@ interface RepoData {
 export const parseGitHubUrl = (url: string): { owner: string; repo: string } | null => {
   // Handle various GitHub URL formats
   const patterns = [
-    /github\.com\/([^\/]+)\/([^\/\?#]+)/,
-    /^([^\/]+)\/([^\/]+)$/,
+    /github\.com\/([^/]+)\/([^/?#]+)/,
+    /^([^/]+)\/([^/]+)$/,
   ];
 
   for (const pattern of patterns) {
@@ -34,7 +34,9 @@ export const parseGitHubUrl = (url: string): { owner: string; repo: string } | n
 
 export const fetchRepoData = async (owner: string, repo: string): Promise<RepoData> => {
   const token = import.meta.env.VITE_GITHUB_TOKEN;
-  const headers: HeadersInit = token ? { Authorization: `token ${token}` } : {};
+  // Fine-grained PATs (github_pat_) use Bearer, classic tokens (ghp_) use token
+  const authPrefix = token?.startsWith('github_pat_') ? 'Bearer' : 'token';
+  const headers: HeadersInit = token ? { Authorization: `${authPrefix} ${token}` } : {};
 
   // Fetch repo info
   const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
@@ -82,7 +84,7 @@ export const fetchRepoData = async (owner: string, repo: string): Promise<RepoDa
     name: repoData.name,
     description: repoData.description || "",
     stars: repoData.stargazers_count,
-    contributors: contributors.map((c: any) => ({
+    contributors: contributors.map((c: Contributor) => ({
       login: c.login,
       avatar_url: c.avatar_url,
     })),
